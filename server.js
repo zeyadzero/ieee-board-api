@@ -1,4 +1,4 @@
-// server.js (الكود النهائي الذي يحل مشكلة CORS)
+// server.js (الكود النهائي المستقر والجاهز)
 require('dotenv').config(); 
 const express = require('express');
 const cors = require('cors');
@@ -10,7 +10,8 @@ require('./db'); // لتشغيل الاتصال بقاعدة البيانات
 
 const app = express();
 
-const PORT = process.env.PORT || 9090; 
+const PORT = process.env.PORT || 5000; 
+const FRONTEND_URL = process.env.FRONTEND_URL; 
 const API_GATEWAY_PASS = process.env.API_GATEWAY_PASS; 
 const JWT_SECRET = process.env.JWT_SECRET; 
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET; 
@@ -22,17 +23,14 @@ const REFRESH_TOKEN_EXPIRY = process.env.REFRESH_TOKEN_EXPIRY || '7d';
 // ----------------------------------------------------
 app.use(helmet()); 
 
-// 🚨 قائمة العناوين المسموح بها: يجب أن تكون مطابقة لنطاقات Firebase Hosting
+// قائمة العناوين المسموح بها (حل نهائي لمشكلة Firebase CORS)
 const allowedOrigins = [
-    // 💡 روابط Firebase Hosting (Primary and Secondary)
     'https://ieee-al-azhar-university.web.app', 
     'https://ieee-al-azhar-university.firebaseapp.com',
-    // رابط التطوير المحلي (للتجربة على جهازك)
     'http://localhost:5173' 
 ];
 
 const corsOptions = {
-    // التحقق من أن المنشأ (Origin) موجود في القائمة المسموحة
     origin: (origin, callback) => {
         if (allowedOrigins.includes(origin) || !origin) {
             callback(null, true);
@@ -45,7 +43,7 @@ const corsOptions = {
     optionsSuccessStatus: 200,
 };
 
-app.use(cors(corsOptions)); // تطبيق CORS
+app.use(cors(corsOptions)); 
 app.use(express.json()); // لتحليل JSON
 
 
@@ -121,8 +119,6 @@ app.use((req, res, next) => {
 // ----------------------------------------------------
 // بدء تشغيل الخادم
 // ----------------------------------------------------
-// بدء تشغيل الخادم
-app.listen(PORT, '0.0.0.0', () => { // 🚨 إضافة '0.0.0.0'
+app.listen(PORT, () => {
     console.log(`✅ API Server running on port ${PORT}`);
-    console.log(`✅ Allowed frontend URL: ${FRONTEND_URL}`);
 });
