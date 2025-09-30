@@ -1,4 +1,4 @@
-// server.js (الكود النهائي للنشر على Railway)
+// server.js (الكود النهائي الذي يحل مشكلة CORS على Railway)
 require('dotenv').config(); 
 const express = require('express');
 const cors = require('cors');
@@ -23,19 +23,35 @@ const REFRESH_TOKEN_EXPIRY = process.env.REFRESH_TOKEN_EXPIRY || '7d';
 // ----------------------------------------------------
 app.use(helmet()); 
 
+// 🚨 قائمة العناوين المسموح بها: تتضمن العنوان القادم من Railway والعنوان الثابت لـ Firebase
+const allowedOrigins = [
+    FRONTEND_URL, 
+    // يجب أن يكون هذا مطابقاً لعنوان Firebase Hosting الخاص بك
+    'https://ieee-al-azhar-university.web.app' 
+];
+
 const corsOptions = {
-    origin: FRONTEND_URL, 
+    // نستخدم دالة للتحقق من تطابق المنشأ (Origin)
+    origin: (origin, callback) => {
+        // السماح بالمنشأ المسموح به أو الطلبات بدون منشأ (مثل التطبيقات الأصلية)
+        if (allowedOrigins.includes(origin) || !origin) {
+            callback(null, true);
+        } else {
+            // في حالة الرفض، يمكن تخصيص رسالة خطأ
+            callback(new Error('Not allowed by CORS policy. Origin rejected.'), false);
+        }
+    },
     methods: ['GET', 'POST', 'OPTIONS'], 
     allowedHeaders: ['Content-Type', 'Authorization'], 
     optionsSuccessStatus: 200,
 };
-app.use(cors(corsOptions)); 
 
-app.use(express.json()); // لتحليل JSON من طلبات POST
+app.use(cors(corsOptions)); // تطبيق CORS
+app.use(express.json()); // لتحليل JSON
 
 
 // ----------------------------------------------------
-// 2. مسارات المصادقة (توليد وتجديد التوكن)
+// 2. مسارات المصادقة (Auth و Refresh)
 // ----------------------------------------------------
 
 // أ. مسار توليد التوكنين (Auth)
@@ -45,7 +61,6 @@ app.post('/api/auth', (req, res) => {
     }
     
     const payload = { id: 'board-member', role: 'viewer' }; 
-
     const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
     const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRY });
 
@@ -72,10 +87,9 @@ app.post('/api/refresh', (req, res) => {
 
 
 // ----------------------------------------------------
-// 3. مسارات الـ API المحمية (تستخدم Access Token)
+// 3. مسارات الـ API المحمية
 // ----------------------------------------------------
 
-// 1. مسار جلب جميع المجالس (محمي)
 app.get('/api/board', authenticateToken, async (req, res) => {
     try {
         const data = await boardController.getBoardData();
@@ -86,7 +100,6 @@ app.get('/api/board', authenticateToken, async (req, res) => {
     }
 });
 
-// 2. مسار جلب الرئيس السابق (محمي)
 app.get('/api/last-chairman', authenticateToken, async (req, res) => {
     try {
         const data = await boardController.getLastChairman();
