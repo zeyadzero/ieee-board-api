@@ -44,7 +44,7 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions)); 
-app.options('*', cors(corsOptions)); // ✅ يرد على preflight OPTIONS
+app.options('/*', cors(corsOptions)); // ✅ يرد على preflight OPTIONS
 
 app.use(express.json()); // لتحليل JSON
 
