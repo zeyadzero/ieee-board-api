@@ -1,16 +1,16 @@
-// server.js (الكود النهائي بعد حذف الحماية)
+// server.js (الكود النهائي الذي يحل مشكلة 502/Connection Refused)
 require('dotenv').config(); 
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const jwt = require('jsonwebtoken'); 
 const boardController = require('./boardController'); 
-// 🚨🚨🚨 تم حذف سطر استيراد authenticateToken 🚨🚨🚨
+// تم حذف authenticateToken لأننا ألغينا الحماية مؤقتاً
 require('./db'); 
 
 const app = express();
 
-const PORT = process.env.PORT || 5000; 
+const PORT = process.env.PORT || 9090; 
 const API_GATEWAY_PASS = process.env.API_GATEWAY_PASS; 
 const JWT_SECRET = process.env.JWT_SECRET; 
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET; 
@@ -22,7 +22,7 @@ const REFRESH_TOKEN_EXPIRY = process.env.REFRESH_TOKEN_EXPIRY || '7d';
 // ----------------------------------------------------
 app.use(helmet()); 
 
-// قائمة العناوين المسموح بها (حل نهائي لمشكلة Firebase CORS)
+// قائمة العناوين المسموح بها (حل CORS)
 const allowedOrigins = [
     'https://ieee-al-azhar-university.web.app', 
     'https://ieee-al-azhar-university.firebaseapp.com',
@@ -47,10 +47,9 @@ app.use(express.json()); // لتحليل JSON
 
 
 // ----------------------------------------------------
-// 2. مسارات المصادقة (Auth و Refresh) - لم تعد مستخدمة في Frontend
+// 2. مسارات المصادقة (Auth و Refresh) - مُعطلة حالياً
 // ----------------------------------------------------
 app.post('/api/auth', (req, res) => {
-    // ... (منطق توليد التوكن) ...
     res.status(503).json({ message: "Authentication is temporarily disabled." }); 
 });
 app.post('/api/refresh', (req, res) => {
@@ -63,7 +62,7 @@ app.post('/api/refresh', (req, res) => {
 // ----------------------------------------------------
 
 // 1. مسار جلب جميع المجالس (عام)
-app.get('/api/board', async (req, res) => { // 🚨 تم حذف authenticateToken
+app.get('/api/board', async (req, res) => { 
     try {
         const data = await boardController.getBoardData();
         res.json(data);
@@ -74,7 +73,7 @@ app.get('/api/board', async (req, res) => { // 🚨 تم حذف authenticateToke
 });
 
 // 2. مسار جلب الرئيس السابق (عام)
-app.get('/api/last-chairman', async (req, res) => { // 🚨 تم حذف authenticateToken
+app.get('/api/last-chairman', async (req, res) => { 
     try {
         const data = await boardController.getLastChairman();
         res.json(data);
@@ -96,6 +95,6 @@ app.use((req, res, next) => {
 // ----------------------------------------------------
 // بدء تشغيل الخادم
 // ----------------------------------------------------
-app.listen(PORT, '0.0.0.0', () => { 
+app.listen(PORT, '0.0.0.0', () => { // 🚨 هذا هو التصحيح الحاسم!
     console.log(`✅ API Server running on port ${PORT}`);
 });
