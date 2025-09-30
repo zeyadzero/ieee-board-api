@@ -1,4 +1,4 @@
-// server.js (الكود النهائي الذي يحل مشكلة CORS على Railway)
+// server.js (الكود النهائي الذي يحل مشكلة CORS على Firebase)
 require('dotenv').config(); 
 const express = require('express');
 const cors = require('cors');
@@ -23,17 +23,17 @@ const REFRESH_TOKEN_EXPIRY = process.env.REFRESH_TOKEN_EXPIRY || '7d';
 // ----------------------------------------------------
 app.use(helmet()); 
 
-// 🚨 قائمة العناوين المسموح بها: تتضمن العنوان القادم من Railway والعنوان الثابت لـ Firebase
+// 🚨 قائمة العناوين المسموح بها: تسمح بكل من النطاقين (Domains) لـ Firebase
 const allowedOrigins = [
-    FRONTEND_URL, 
-    // يجب أن يكون هذا مطابقاً لعنوان Firebase Hosting الخاص بك
-    'https://ieee-al-azhar-university.web.app' 
+    FRONTEND_URL, // العنوان الذي قرأته من Railway Variables
+    'https://ieee-al-azhar-university.web.app', 
+    'https://ieee-al-azhar-university.firebaseapp.com' 
 ];
 
 const corsOptions = {
     // نستخدم دالة للتحقق من تطابق المنشأ (Origin)
     origin: (origin, callback) => {
-        // السماح بالمنشأ المسموح به أو الطلبات بدون منشأ (مثل التطبيقات الأصلية)
+        // السماح إذا كان المنشأ موجودًا في القائمة أو كان الطلب بدون منشأ (مثل التطبيقات الأصلية)
         if (allowedOrigins.includes(origin) || !origin) {
             callback(null, true);
         } else {
