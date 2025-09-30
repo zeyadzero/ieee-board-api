@@ -1,4 +1,4 @@
-// server.js (الكود النهائي الذي يحل مشكلة CORS على Firebase)
+// server.js (الكود النهائي الذي يحل مشكلة CORS)
 require('dotenv').config(); 
 const express = require('express');
 const cors = require('cors');
@@ -11,7 +11,6 @@ require('./db'); // لتشغيل الاتصال بقاعدة البيانات
 const app = express();
 
 const PORT = process.env.PORT || 5000; 
-const FRONTEND_URL = process.env.FRONTEND_URL; 
 const API_GATEWAY_PASS = process.env.API_GATEWAY_PASS; 
 const JWT_SECRET = process.env.JWT_SECRET; 
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET; 
@@ -23,21 +22,21 @@ const REFRESH_TOKEN_EXPIRY = process.env.REFRESH_TOKEN_EXPIRY || '7d';
 // ----------------------------------------------------
 app.use(helmet()); 
 
-// 🚨 قائمة العناوين المسموح بها: تسمح بكل من النطاقين (Domains) لـ Firebase
+// 🚨 قائمة العناوين المسموح بها: يجب أن تكون مطابقة لنطاقات Firebase Hosting
 const allowedOrigins = [
-    FRONTEND_URL, // العنوان الذي قرأته من Railway Variables
+    // 💡 روابط Firebase Hosting (Primary and Secondary)
     'https://ieee-al-azhar-university.web.app', 
-    'https://ieee-al-azhar-university.firebaseapp.com' 
+    'https://ieee-al-azhar-university.firebaseapp.com',
+    // رابط التطوير المحلي (للتجربة على جهازك)
+    'http://localhost:5173' 
 ];
 
 const corsOptions = {
-    // نستخدم دالة للتحقق من تطابق المنشأ (Origin)
+    // التحقق من أن المنشأ (Origin) موجود في القائمة المسموحة
     origin: (origin, callback) => {
-        // السماح إذا كان المنشأ موجودًا في القائمة أو كان الطلب بدون منشأ (مثل التطبيقات الأصلية)
         if (allowedOrigins.includes(origin) || !origin) {
             callback(null, true);
         } else {
-            // في حالة الرفض، يمكن تخصيص رسالة خطأ
             callback(new Error('Not allowed by CORS policy. Origin rejected.'), false);
         }
     },
@@ -124,5 +123,5 @@ app.use((req, res, next) => {
 // ----------------------------------------------------
 app.listen(PORT, () => {
     console.log(`✅ API Server running on port ${PORT}`);
-    console.log(`✅ Allowed frontend URL: ${FRONTEND_URL}`);
+    // تم إزالة عرض FRONTEND_URL لأنه أصبح ثابتاً في الكود
 });
