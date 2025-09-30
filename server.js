@@ -1,4 +1,4 @@
-// server.js (الكود النهائي المستقر والجاهز)
+// server.js (الكود النهائي الذي يضمن استقرار التوكن)
 require('dotenv').config(); 
 const express = require('express');
 const cors = require('cors');
@@ -11,7 +11,6 @@ require('./db'); // لتشغيل الاتصال بقاعدة البيانات
 const app = express();
 
 const PORT = process.env.PORT || 5000; 
-const FRONTEND_URL = process.env.FRONTEND_URL; 
 const API_GATEWAY_PASS = process.env.API_GATEWAY_PASS; 
 const JWT_SECRET = process.env.JWT_SECRET; 
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET; 
@@ -57,7 +56,9 @@ app.post('/api/auth', (req, res) => {
         return res.status(401).json({ message: "Invalid credentials or password not provided." });
     }
     
-    const payload = { id: 'board-member', role: 'viewer' }; 
+    // 🚨 التصحيح الحاسم: استخدام حمولة حقيقية لمنع فشل jwt.sign()
+    const payload = { userId: 1, role: 'board_viewer' }; 
+
     const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
     const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRY });
 
@@ -76,7 +77,8 @@ app.post('/api/refresh', (req, res) => {
             return res.status(403).json({ message: 'Refresh Token expired or invalid.' });
         }
         
-        const newAccessToken = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
+        // توليد Access Token جديد بنفس الحمولة
+        const newAccessToken = jwt.sign({ userId: user.userId, role: user.role }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
         
         res.json({ accessToken: newAccessToken });
     });
