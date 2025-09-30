@@ -39,7 +39,7 @@ const getLastChairman = async () => {
     SELECT id, name, position, image_url AS image, bio, linkedin_url AS linkedin
     FROM members
     WHERE board_type = 'last-chairman'
-    LIMIT 1;
+    ORDER BY id DESC;
   `;
 
   try {
