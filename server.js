@@ -1,14 +1,12 @@
-// server.js (الكود النهائي المستقر والجاهز للنشر على Railway)
+// server.js (الكود النهائي بعد حذف الحماية)
 require('dotenv').config(); 
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const jwt = require('jsonwebtoken'); 
-// 💡 نعتمد على أن boardController سيستخدم دالة query من db.js
 const boardController = require('./boardController'); 
-const { authenticateToken } = require('./authMiddleware'); 
-// 🚨 إزالة require('./db') من هنا لتجنب فشل التحميل المبكر
-
+// 🚨🚨🚨 تم حذف سطر استيراد authenticateToken 🚨🚨🚨
+require('./db'); 
 
 const app = express();
 
@@ -24,7 +22,7 @@ const REFRESH_TOKEN_EXPIRY = process.env.REFRESH_TOKEN_EXPIRY || '7d';
 // ----------------------------------------------------
 app.use(helmet()); 
 
-// قائمة العناوين المسموح بها (لحل مشكلة Firebase CORS)
+// قائمة العناوين المسموح بها (حل نهائي لمشكلة Firebase CORS)
 const allowedOrigins = [
     'https://ieee-al-azhar-university.web.app', 
     'https://ieee-al-azhar-university.firebaseapp.com',
@@ -49,47 +47,23 @@ app.use(express.json()); // لتحليل JSON
 
 
 // ----------------------------------------------------
-// 2. مسارات المصادقة (Auth و Refresh)
+// 2. مسارات المصادقة (Auth و Refresh) - لم تعد مستخدمة في Frontend
 // ----------------------------------------------------
-
-// أ. مسار توليد التوكنين (Auth)
 app.post('/api/auth', (req, res) => {
-    if (!req.body.password || req.body.password !== API_GATEWAY_PASS) {
-        return res.status(401).json({ message: "Invalid credentials or password not provided." });
-    }
-    
-    const payload = { userId: 1, role: 'board_viewer' }; 
-    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
-    const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRY });
-
-    res.json({ accessToken: accessToken, refreshToken: refreshToken });
+    // ... (منطق توليد التوكن) ...
+    res.status(503).json({ message: "Authentication is temporarily disabled." }); 
 });
-
-
-// ب. مسار تجديد التوكن (Refresh Endpoint)
 app.post('/api/refresh', (req, res) => {
-    const refreshToken = req.body.token;
-
-    if (refreshToken == null) return res.status(401).json({ message: 'Refresh Token is missing.' });
-    
-    jwt.verify(refreshToken, JWT_REFRESH_SECRET, (err, user) => {
-        if (err) {
-            return res.status(403).json({ message: 'Refresh Token expired or invalid.' });
-        }
-        
-        const newAccessToken = jwt.sign({ userId: user.userId, role: user.role }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
-        
-        res.json({ accessToken: newAccessToken });
-    });
+    res.status(503).json({ message: "Authentication is temporarily disabled." });
 });
 
 
 // ----------------------------------------------------
-// 3. مسارات الـ API المحمية
+// 3. مسارات الـ API العامة (بدون حماية)
 // ----------------------------------------------------
 
-// 1. مسار جلب جميع المجالس (محمي)
-app.get('/api/board', authenticateToken, async (req, res) => {
+// 1. مسار جلب جميع المجالس (عام)
+app.get('/api/board', async (req, res) => { // 🚨 تم حذف authenticateToken
     try {
         const data = await boardController.getBoardData();
         res.json(data);
@@ -99,8 +73,8 @@ app.get('/api/board', authenticateToken, async (req, res) => {
     }
 });
 
-// 2. مسار جلب الرئيس السابق (محمي)
-app.get('/api/last-chairman', authenticateToken, async (req, res) => {
+// 2. مسار جلب الرئيس السابق (عام)
+app.get('/api/last-chairman', async (req, res) => { // 🚨 تم حذف authenticateToken
     try {
         const data = await boardController.getLastChairman();
         res.json(data);
@@ -122,6 +96,6 @@ app.use((req, res, next) => {
 // ----------------------------------------------------
 // بدء تشغيل الخادم
 // ----------------------------------------------------
-app.listen(PORT, '0.0.0.0', () => { // 🚨 إضافة '0.0.0.0' لزيادة الموثوقية في Railway
+app.listen(PORT, '0.0.0.0', () => { 
     console.log(`✅ API Server running on port ${PORT}`);
 });
