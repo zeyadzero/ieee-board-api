@@ -1,4 +1,4 @@
-// server.js (الكود النهائي الذي يضمن استقرار التوكن)
+// server.js (النسخة النهائية المعدلة)
 require('dotenv').config(); 
 const express = require('express');
 const cors = require('cors');
@@ -39,10 +39,13 @@ const corsOptions = {
     },
     methods: ['GET', 'POST', 'OPTIONS'], 
     allowedHeaders: ['Content-Type', 'Authorization'], 
+    credentials: true, // لو هتستخدم كوكيز/سِشِن
     optionsSuccessStatus: 200,
 };
 
 app.use(cors(corsOptions)); 
+app.options('*', cors(corsOptions)); // ✅ يرد على preflight OPTIONS
+
 app.use(express.json()); // لتحليل JSON
 
 
@@ -56,7 +59,6 @@ app.post('/api/auth', (req, res) => {
         return res.status(401).json({ message: "Invalid credentials or password not provided." });
     }
     
-    // 🚨 التصحيح الحاسم: استخدام حمولة حقيقية لمنع فشل jwt.sign()
     const payload = { userId: 1, role: 'board_viewer' }; 
 
     const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
@@ -65,6 +67,11 @@ app.post('/api/auth', (req, res) => {
     res.json({ accessToken: accessToken, refreshToken: refreshToken });
 });
 
+// alias علشان لو الفرونت يضرب /auth بدل /api/auth
+app.post('/auth', (req, res, next) => {
+    req.url = '/api/auth';
+    next();
+});
 
 // ب. مسار تجديد التوكن (Refresh Endpoint)
 app.post('/api/refresh', (req, res) => {
@@ -77,7 +84,6 @@ app.post('/api/refresh', (req, res) => {
             return res.status(403).json({ message: 'Refresh Token expired or invalid.' });
         }
         
-        // توليد Access Token جديد بنفس الحمولة
         const newAccessToken = jwt.sign({ userId: user.userId, role: user.role }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
         
         res.json({ accessToken: newAccessToken });
@@ -88,7 +94,6 @@ app.post('/api/refresh', (req, res) => {
 // ----------------------------------------------------
 // 3. مسارات الـ API المحمية
 // ----------------------------------------------------
-
 app.get('/api/board', authenticateToken, async (req, res) => {
     try {
         const data = await boardController.getBoardData();
@@ -121,6 +126,6 @@ app.use((req, res, next) => {
 // ----------------------------------------------------
 // بدء تشغيل الخادم
 // ----------------------------------------------------
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`✅ API Server running on port ${PORT}`);
 });
