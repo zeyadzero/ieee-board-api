@@ -1,28 +1,24 @@
-// server.js (الكود النهائي الذي يحل مشكلة 502/Connection Refused)
+// server.js (الكود النهائي الذي يضمن استقرار الخادم على Railway)
 require('dotenv').config(); 
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const jwt = require('jsonwebtoken'); 
 const boardController = require('./boardController'); 
-// تم حذف authenticateToken لأننا ألغينا الحماية مؤقتاً
-require('./db'); 
+// 🚨 لم نعد نستخدم authenticateToken (للتبسيط)
+require('./db'); // يحتوي على تهيئة اتصال PostgreSQL
 
 const app = express();
 
-const PORT = process.env.PORT || 9090; 
-const API_GATEWAY_PASS = process.env.API_GATEWAY_PASS; 
-const JWT_SECRET = process.env.JWT_SECRET; 
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET; 
-const TOKEN_EXPIRY = process.env.TOKEN_EXPIRY || '1d'; 
-const REFRESH_TOKEN_EXPIRY = process.env.REFRESH_TOKEN_EXPIRY || '7d'; 
+// 🚨 التصحيح الحاسم: استخدام المنفذ الذي يحدده Railway بالكامل
+const PORT = process.env.PORT; 
 
 // ----------------------------------------------------
 // 1. الأمان والـ MIDDLEWARES
 // ----------------------------------------------------
 app.use(helmet()); 
 
-// قائمة العناوين المسموح بها (حل CORS)
+// قائمة العناوين المسموح بها (لحل CORS)
 const allowedOrigins = [
     'https://ieee-al-azhar-university.web.app', 
     'https://ieee-al-azhar-university.firebaseapp.com',
@@ -95,6 +91,6 @@ app.use((req, res, next) => {
 // ----------------------------------------------------
 // بدء تشغيل الخادم
 // ----------------------------------------------------
-app.listen(PORT, '0.0.0.0', () => { // 🚨 هذا هو التصحيح الحاسم!
+app.listen(PORT, '0.0.0.0', () => { // 🚨 استخدام '0.0.0.0' يحل مشكلة الاستماع في بيئات Docker/Railway
     console.log(`✅ API Server running on port ${PORT}`);
 });
