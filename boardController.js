@@ -1,4 +1,5 @@
 // boardController.js
+const db = require("./db");
 
 // جلب بيانات جميع المجالس (Officers, Technical, Branding, Operation)
 const getBoardData = async () => {

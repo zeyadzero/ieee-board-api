@@ -1,96 +1,69 @@
-// server.js (الكود النهائي الذي يضمن استقرار الخادم على Railway)
-require('dotenv').config(); 
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const jwt = require('jsonwebtoken'); 
-const boardController = require('./boardController'); 
-// 🚨 لم نعد نستخدم authenticateToken (للتبسيط)
-require('./db'); // يحتوي على تهيئة اتصال PostgreSQL
+require("dotenv").config();
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+const boardController = require("./boardController");
 
 const app = express();
+const PORT = process.env.PORT || 8080;
 
-// 🚨 التصحيح الحاسم: استخدام المنفذ الذي يحدده Railway بالكامل
-const PORT = process.env.PORT; 
+// -------- Middlewares --------
+app.use(helmet());
+app.use(express.json());
 
-// ----------------------------------------------------
-// 1. الأمان والـ MIDDLEWARES
-// ----------------------------------------------------
-app.use(helmet()); 
-
-// قائمة العناوين المسموح بها (لحل CORS)
 const allowedOrigins = [
-    'https://ieee-al-azhar-university.web.app', 
-    'https://ieee-al-azhar-university.firebaseapp.com',
-    'http://localhost:5173' 
+  "https://ieee-al-azhar-university.web.app",
+  "https://ieee-al-azhar-university.firebaseapp.com",
+  "http://localhost:5173"
 ];
 
-const corsOptions = {
+app.use(
+  cors({
     origin: (origin, callback) => {
-        if (allowedOrigins.includes(origin) || !origin) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS policy. Origin rejected.'), false);
-        }
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS policy."), false);
+      }
     },
-    methods: ['GET', 'POST', 'OPTIONS'], 
-    allowedHeaders: ['Content-Type', 'Authorization'], 
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     optionsSuccessStatus: 200,
-};
+  })
+);
 
-app.use(cors(corsOptions)); 
-app.use(express.json()); // لتحليل JSON
+// -------- Routes --------
 
-
-// ----------------------------------------------------
-// 2. مسارات المصادقة (Auth و Refresh) - مُعطلة حالياً
-// ----------------------------------------------------
-app.post('/api/auth', (req, res) => {
-    res.status(503).json({ message: "Authentication is temporarily disabled." }); 
-});
-app.post('/api/refresh', (req, res) => {
-    res.status(503).json({ message: "Authentication is temporarily disabled." });
-});
-
-
-// ----------------------------------------------------
-// 3. مسارات الـ API العامة (بدون حماية)
-// ----------------------------------------------------
-
-// 1. مسار جلب جميع المجالس (عام)
-app.get('/api/board', async (req, res) => { 
-    try {
-        const data = await boardController.getBoardData();
-        res.json(data);
-    } catch (err) {
-        console.error("Error in /api/board:", err.message);
-        res.status(500).json({ message: "Internal server error while fetching board data." });
-    }
+// ✅ جلب أعضاء المجالس
+app.get("/api/board", async (req, res) => {
+  console.log("📥 GET /api/board");
+  try {
+    const data = await boardController.getBoardData();
+    res.json(data);
+  } catch (err) {
+    console.error("❌ Error in /api/board:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
-// 2. مسار جلب الرئيس السابق (عام)
-app.get('/api/last-chairman', async (req, res) => { 
-    try {
-        const data = await boardController.getLastChairman();
-        res.json(data);
-    } catch (err) {
-        console.error("Error in /api/last-chairman:", err.message);
-        res.status(500).json({ message: "Internal server error while fetching last chairman data." });
-    }
+// ✅ جلب الرئيس السابق
+app.get("/api/last-chairman", async (req, res) => {
+  console.log("📥 GET /api/last-chairman");
+  try {
+    const data = await boardController.getLastChairman();
+    res.json(data);
+  } catch (err) {
+    console.error("❌ Error in /api/last-chairman:", err);
+    res.status(500).json({ message: "Internal server error" });
+  }
 });
 
-
-// ----------------------------------------------------
-// 4. معالجة الأخطاء (404) في النهاية
-// ----------------------------------------------------
-app.use((req, res, next) => {
-    res.status(404).json({ message: "Endpoint not found." });
+// -------- 404 Fallback --------
+app.use((req, res) => {
+  res.status(404).json({ message: "Endpoint not found." });
 });
 
-
-// ----------------------------------------------------
-// بدء تشغيل الخادم
-// ----------------------------------------------------
-app.listen(PORT, '0.0.0.0', () => { // 🚨 استخدام '0.0.0.0' يحل مشكلة الاستماع في بيئات Docker/Railway
-    console.log(`✅ API Server running on port ${PORT}`);
+// -------- Start Server --------
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`✅ API Server running on port ${PORT}`);
 });
