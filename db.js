@@ -1,7 +1,6 @@
-// db.js (الكود النهائي للنشر)
+// db.js (الكود الذي يجب استخدامه)
 const { Pool } = require('pg');
 
-// Railway يوفر هذا المتغير تلقائيًا بعد الربط
 const connectionString = process.env.DATABASE_URL;
 
 let pool;
@@ -17,9 +16,9 @@ if (connectionString) {
     });
     console.log('✅ PostgreSQL Pool initialized using DATABASE_URL (Production mode).');
 } else {
-    // 💡 الوضع المحلي (Local Development): يستخدم الإعدادات المنفصلة من ملف .env
-    // هذا الجزء سيعمل فقط إذا كنت تشغل الخادم محليًا
+    // 💡 الوضع المحلي (Local Development):
     if (!process.env.PG_USER) {
+        // هذا الخطأ سيظهر فقط إذا كنت تشغل محلياً دون إعداد .env
         throw new Error("❌ DATABASE_URL is missing, and local PG_USER is not defined. Cannot connect.");
     }
 
@@ -35,14 +34,9 @@ if (connectionString) {
 }
 
 
-// اختبار الاتصال
-pool.query('SELECT NOW()', (err, res) => {
-    if (err) {
-        console.error('❌ Error connecting to PostgreSQL:', err.stack);
-    } else {
-        console.log('✅ Connected to PostgreSQL successfully at:', res.rows[0].now);
-    }
-});
+// 🚨🚨🚨 تم حذف اختبار الاتصال (pool.query) بالكامل لضمان استقرار الخادم 🚨🚨🚨
+// الاتصال سيتم اختباره عند أول طلب API فعلي.
+
 
 module.exports = {
     query: (text, params) => pool.query(text, params),
