@@ -1,34 +1,95 @@
-// server.js (الكود المبسط للوصول العام)
+// server.js (الكود النهائي المستقر والجاهز للنشر على Railway)
 require('dotenv').config(); 
 const express = require('express');
-const cors = require('cors'); // 🚨 الآن CORS أصبح شاملاً
+const cors = require('cors');
 const helmet = require('helmet');
-// تم إزالة jwt لأننا لن نستخدمه
+const jwt = require('jsonwebtoken'); 
+// 💡 نعتمد على أن boardController سيستخدم دالة query من db.js
 const boardController = require('./boardController'); 
-// تم إزالة authenticateToken لأننا لن نستخدمه
-require('./db'); 
+const { authenticateToken } = require('./authMiddleware'); 
+// 🚨 إزالة require('./db') من هنا لتجنب فشل التحميل المبكر
+
 
 const app = express();
 
 const PORT = process.env.PORT || 5000; 
+const API_GATEWAY_PASS = process.env.API_GATEWAY_PASS; 
+const JWT_SECRET = process.env.JWT_SECRET; 
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET; 
+const TOKEN_EXPIRY = process.env.TOKEN_EXPIRY || '1d'; 
+const REFRESH_TOKEN_EXPIRY = process.env.REFRESH_TOKEN_EXPIRY || '7d'; 
 
 // ----------------------------------------------------
-// 1. الأمان والـ MIDDLEWARES (المبسط)
+// 1. الأمان والـ MIDDLEWARES
 // ----------------------------------------------------
 app.use(helmet()); 
 
-// 🚨 الحل الأقصى لـ CORS: السماح للجميع بالوصول
-app.use(cors()); 
+// قائمة العناوين المسموح بها (لحل مشكلة Firebase CORS)
+const allowedOrigins = [
+    'https://ieee-al-azhar-university.web.app', 
+    'https://ieee-al-azhar-university.firebaseapp.com',
+    'http://localhost:5173' 
+];
 
+const corsOptions = {
+    origin: (origin, callback) => {
+        if (allowedOrigins.includes(origin) || !origin) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS policy. Origin rejected.'), false);
+        }
+    },
+    methods: ['GET', 'POST', 'OPTIONS'], 
+    allowedHeaders: ['Content-Type', 'Authorization'], 
+    optionsSuccessStatus: 200,
+};
+
+app.use(cors(corsOptions)); 
 app.use(express.json()); // لتحليل JSON
 
 
 // ----------------------------------------------------
-// 2. مسارات الـ API (عامة ومباشرة)
+// 2. مسارات المصادقة (Auth و Refresh)
 // ----------------------------------------------------
 
-// 1. مسار جلب جميع المجالس (عام)
-app.get('/api/board', async (req, res) => {
+// أ. مسار توليد التوكنين (Auth)
+app.post('/api/auth', (req, res) => {
+    if (!req.body.password || req.body.password !== API_GATEWAY_PASS) {
+        return res.status(401).json({ message: "Invalid credentials or password not provided." });
+    }
+    
+    const payload = { userId: 1, role: 'board_viewer' }; 
+    const accessToken = jwt.sign(payload, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
+    const refreshToken = jwt.sign(payload, JWT_REFRESH_SECRET, { expiresIn: REFRESH_TOKEN_EXPIRY });
+
+    res.json({ accessToken: accessToken, refreshToken: refreshToken });
+});
+
+
+// ب. مسار تجديد التوكن (Refresh Endpoint)
+app.post('/api/refresh', (req, res) => {
+    const refreshToken = req.body.token;
+
+    if (refreshToken == null) return res.status(401).json({ message: 'Refresh Token is missing.' });
+    
+    jwt.verify(refreshToken, JWT_REFRESH_SECRET, (err, user) => {
+        if (err) {
+            return res.status(403).json({ message: 'Refresh Token expired or invalid.' });
+        }
+        
+        const newAccessToken = jwt.sign({ userId: user.userId, role: user.role }, JWT_SECRET, { expiresIn: TOKEN_EXPIRY });
+        
+        res.json({ accessToken: newAccessToken });
+    });
+});
+
+
+// ----------------------------------------------------
+// 3. مسارات الـ API المحمية
+// ----------------------------------------------------
+
+// 1. مسار جلب جميع المجالس (محمي)
+app.get('/api/board', authenticateToken, async (req, res) => {
     try {
         const data = await boardController.getBoardData();
         res.json(data);
@@ -38,8 +99,8 @@ app.get('/api/board', async (req, res) => {
     }
 });
 
-// 2. مسار جلب الرئيس السابق (عام)
-app.get('/api/last-chairman', async (req, res) => {
+// 2. مسار جلب الرئيس السابق (محمي)
+app.get('/api/last-chairman', authenticateToken, async (req, res) => {
     try {
         const data = await boardController.getLastChairman();
         res.json(data);
@@ -51,7 +112,7 @@ app.get('/api/last-chairman', async (req, res) => {
 
 
 // ----------------------------------------------------
-// 3. معالجة الأخطاء (404) في النهاية
+// 4. معالجة الأخطاء (404) في النهاية
 // ----------------------------------------------------
 app.use((req, res, next) => {
     res.status(404).json({ message: "Endpoint not found." });
@@ -61,6 +122,6 @@ app.use((req, res, next) => {
 // ----------------------------------------------------
 // بدء تشغيل الخادم
 // ----------------------------------------------------
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => { // 🚨 إضافة '0.0.0.0' لزيادة الموثوقية في Railway
     console.log(`✅ API Server running on port ${PORT}`);
 });
