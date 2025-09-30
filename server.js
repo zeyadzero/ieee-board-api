@@ -10,7 +10,7 @@ require('./db'); // لتشغيل الاتصال بقاعدة البيانات
 
 const app = express();
 
-const PORT = process.env.PORT || 5000; 
+const PORT = process.env.PORT || 9090; 
 const API_GATEWAY_PASS = process.env.API_GATEWAY_PASS; 
 const JWT_SECRET = process.env.JWT_SECRET; 
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET; 
