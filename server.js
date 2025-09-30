@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
 const boardController = require("./boardController");
+require("./db"); // init DB
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -32,13 +33,26 @@ app.use(
   })
 );
 
-// -------- Routes --------
+// -------- Debug Route --------
+app.get("/", (req, res) => {
+  res.send("✅ API is alive and responding");
+});
 
-// ✅ جلب أعضاء المجالس
+// -------- Health Check --------
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    time: new Date(),
+    port: PORT,
+  });
+});
+
+// -------- API Routes --------
 app.get("/api/board", async (req, res) => {
   console.log("📥 GET /api/board");
   try {
     const data = await boardController.getBoardData();
+    console.log("📤 Sending board data");
     res.json(data);
   } catch (err) {
     console.error("❌ Error in /api/board:", err);
@@ -46,11 +60,11 @@ app.get("/api/board", async (req, res) => {
   }
 });
 
-// ✅ جلب الرئيس السابق
 app.get("/api/last-chairman", async (req, res) => {
   console.log("📥 GET /api/last-chairman");
   try {
     const data = await boardController.getLastChairman();
+    console.log("📤 Sending last chairman data");
     res.json(data);
   } catch (err) {
     console.error("❌ Error in /api/last-chairman:", err);
